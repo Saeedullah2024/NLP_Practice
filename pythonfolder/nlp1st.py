@@ -5,6 +5,7 @@ from nltk.corpus import stopwords
 from fastapi import FastAPI
 from pydantic import BaseModel , Field , StrictStr
 from nltk.tag import pos_tag
+from nltk.chunk import ne_chunk
 
 app = FastAPI()
 
@@ -44,10 +45,29 @@ def pos_fun(state : SentencePos):
     sentence = state.sentence
     stopwordList = stopwords.words('english')
     sentences = sent_tokenize(sentence)
+    postagsword = []
     for i in range(len(sentences)):
         words = word_tokenize(sentences[i])
         words = [word for word in words if word not in stopwordList]
-        postagsword = pos_tag(words)
-        return {
+        postagsword.extend(pos_tag(words)) #We should give list of words
+    return {
             "Part_Of_Speech" : postagsword 
         }
+
+@app.post("/name_entity_relation")
+def name_diagnosis(state : Sentence):
+    words = word_tokenize(state.sentence)
+    words_withtag = pos_tag(words)
+    named_entities = ne_chunk(words_withtag)
+    entities = []
+    for entity in named_entities:
+        if hasattr(entity, "label"):
+            entity_text = " ".join(word for word, tag in entity)
+
+            entities.append({
+                "text": entity_text,
+                "label": entity.label()
+            })
+    return {
+        "Return_Named" : entities
+    }
